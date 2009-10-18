@@ -7,6 +7,8 @@ use HTML::Entities;
 use HTML::TreeBuilder;
 use XML::Writer;
 
+# Otherwise we can get complaints when unicode is output
+binmode STDOUT, ':utf8';
 
 # Fetch the postcode to use from the args
 my $postcode = join '', @ARGV;
@@ -51,9 +53,6 @@ $xml->endTag(); # Movies
 $xml->endTag(); # Theater
 $xml->endTag(); # MovieTimes
 $xml->end();
-
-# Otherwise we can get complaints when unicode is output
-binmode STDOUT, ':utf8';
 
 # Tada!
 print $out;
