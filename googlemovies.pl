@@ -9,6 +9,7 @@ use HTML::TreeBuilder;
 # Otherwise we can get complaints when unicode is output
 binmode STDOUT, ':utf8';
 
+# Fetch the postcode to use from the args
 my $postcode = join '', @ARGV;
 $postcode =~ s/\s+//;
 
