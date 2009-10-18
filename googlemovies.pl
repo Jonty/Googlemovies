@@ -82,15 +82,16 @@ sub parse_movies {
 
             print "<Movie>\n";
 
-            if ($movie =~ /<b.*?>(.*)<\/b>/i) {
-                print "<Name>$1</Name>\n";
+            if ((my $moviename) = ($movie =~ /<b.*?>(.*)<\/b>/i)) {
+                $moviename =~ s/&/&amp;/;
+                print "<Name>$moviename</Name>\n";
             }
 
             if ($movie =~ /Rated\s+(\w+)/i) {
                 print "<Rating>$1</Rating>\n";
             }
 
-            if ($movie =~ /<br(?: \/)?>[^\w\s]*([\w\s]+)[^-]*-\s*/i) {
+            if ($movie =~ /<br(?: \/)?>[^\w\s]*([\w\s]+)[^-]*-/i) {
                 print "<RunningTime>$1</RunningTime>\n";
             }
 
