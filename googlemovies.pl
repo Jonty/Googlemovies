@@ -79,7 +79,6 @@ sub parse_movies {
 
         if ($movie) {
             $movie = decode_entities($movie);
-            $movie =~ s/&nbsp;/ /g;
 
             print "<Movie>\n";
 
