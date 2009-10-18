@@ -14,12 +14,17 @@ binmode STDOUT, ':utf8';
 my $postcode = join '', @ARGV;
 $postcode =~ s/\s+//;
 
+if (!$postcode) {
+    print "No postcode passed in arguments!\n";
+    exit;
+}
+
 my $googleurl = "http://www.google.com/movies?near=";
 my $url = $googleurl.$postcode;
 my $response = get($googleurl.$postcode);
 
 if (!defined $response) {
-    print "Failed to fetch movie times, did you pass a valid postcode?";
+    print "Failed to fetch movie times, did you pass a valid postcode?\n";
     exit;
 }
 
@@ -43,14 +48,28 @@ $xml->startTag('MovieTimes');
 my @rows = $tree->look_down('_tag', 'tr', valign => 'top'); 
 foreach my $row (@rows) {
     if (my $cinema = $row->look_down('_tag', 'td', colspan => '4')) {
-        parse_cinema($cinema);
+
+        # If we're in a movies block and we find a new theatre, close
+        $xml->endTag() if $xml->in_element('Movies');
+
+        # If we're starting a new Theater block, we need to end the old one
+        $xml->endTag() if $xml->in_element('Theater');
+
+        $xml->startTag('Theater');
+        $xml = parse_cinema($xml, $cinema);
+
     } elsif (my @movierows = $row->look_down('_tag', 'td', valign => 'top')) {
-        parse_movies(@movierows);
+
+        # If we're not in a movies block, we need to start one
+        $xml->startTag('Movies') unless $xml->in_element('Movies');
+
+        $xml = parse_movies($xml, @movierows);
     }
 }
 
-$xml->endTag(); # Movies
-$xml->endTag(); # Theater
+$xml->endTag() if $xml->in_element('Movies');   # Movies
+$xml->endTag() if $xml->in_element('Theater');  # Theater
+
 $xml->endTag(); # MovieTimes
 $xml->end();
 
@@ -58,35 +77,32 @@ $xml->end();
 print $out;
 
 
-my $cinemaCount = 0;
 sub parse_cinema {
-    my $cinema = shift;
+    my ($xml, $cinema) = @_;
 
-    # We need to end the previous cinema block if we hit a new one
-    if ($cinemaCount++ > 0) {
-        $xml->endTag(); #Movies
-        $xml->endTag(); #Theater
-    }
-
-    $xml->startTag('Theater');
-
-    my $name = decode_entities(($cinema->look_down('_tag', 'b'))[0]->as_text);
+    my $name = ($cinema->look_down('_tag', 'b'))[0]->as_text;
+    $name =~ s/&nbsp;/ /g; # Because Myth can't handle the UTF8 representation of &nbsp
+    $name = decode_entities($name);
     $xml->dataElement('Name', $name);
 
-    my $address = decode_entities(($cinema->look_down('_tag', 'font'))[0]->as_HTML);
+    my $address = ($cinema->look_down('_tag', 'font'))[0]->as_HTML;
+    $address =~ s/&nbsp;/ /g;
+    $address = decode_entities($address);
     $address =~ m/>(.*) - [^<]+</;
     $xml->dataElement('Address', $1);
 
-    $xml->startTag('Movies');
+    return $xml;
 }
 
 sub parse_movies {
+    my $xml = shift;
     my @movierows = @_;
 
     foreach my $movierow (@movierows) {
         my $movie = ($movierow->look_down('_tag', 'font'))[0]->as_HTML;
 
         if ($movie) {
+            $movie =~ s/&nbsp;/ /g;
             $movie = decode_entities($movie);
             $xml->startTag('Movie');
 
@@ -110,4 +126,6 @@ sub parse_movies {
             $xml->endTag(); #Movie
         }
     }
+
+    return $xml;
 }
