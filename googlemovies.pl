@@ -5,6 +5,7 @@ use strict;
 use LWP::Simple;
 use HTML::Entities;
 use HTML::TreeBuilder;
+use XML::Writer;
 
 # Otherwise we can get complaints when unicode is output
 binmode STDOUT, ':utf8';
@@ -27,10 +28,15 @@ $tree->parse($response);
 $tree->eof;
 
 
-print <<HEAD;
-<?xml version="1.0" encoding="utf-8"?>
-<MovieTimes>
-HEAD
+my $out = '';
+my $xml = new XML::Writer(
+    OUTPUT => $out, 
+    DATA_MODE => 1, 
+    DATA_INDENT => 4
+);
+
+$xml->xmlDecl();
+$xml->startTag('MovieTimes');
 
 # The table isn't well structured, so we need to switch between
 # cinemas and movies as we come across them
@@ -43,11 +49,11 @@ foreach my $row (@rows) {
     }
 }
 
-print <<END;
-</Movies>
-</Theater>
-</MovieTimes>
-END
+$xml->endTag(); # Movies
+$xml->endTag(); # Theater
+$xml->endTag(); # MovieTimes
+$xml->end();
+print $out;
 
 
 my $cinemaCount = 0;
@@ -56,19 +62,20 @@ sub parse_cinema {
 
     # We need to end the previous cinema block if we hit a new one
     if ($cinemaCount++ > 0) {
-        print "</Movies>\n</Theater>\n";
+        $xml->endTag(); #Movies
+        $xml->endTag(); #Theater
     }
 
-    print "<Theater>\n";
+    $xml->startTag('Theater');
 
     my $name = decode_entities(($cinema->look_down('_tag', 'b'))[0]->as_text);
-    print "<Name>$name</Name>\n";
+    $xml->dataElement('Name', $name);
 
     my $address = decode_entities(($cinema->look_down('_tag', 'font'))[0]->as_HTML);
     $address =~ m/>(.*) - [^<]+</;
-    print "<Address>$1</Address>\n";
+    $xml->dataElement('Address', $1);
 
-    print "<Movies>\n";
+    $xml->startTag('Movies');
 }
 
 sub parse_movies {
@@ -79,28 +86,26 @@ sub parse_movies {
 
         if ($movie) {
             $movie = decode_entities($movie);
+            $xml->startTag('Movie');
 
-            print "<Movie>\n";
-
-            if ((my $moviename) = ($movie =~ /<b.*?>(.*)<\/b>/i)) {
-                $moviename =~ s/&/&amp;/;
-                print "<Name>$moviename</Name>\n";
+            if ($movie =~ /<b.*?>(.*)<\/b>/i) {
+                $xml->dataElement('Name', $1);
             }
 
             if ($movie =~ /Rated\s+(\w+)/i) {
-                print "<Rating>$1</Rating>\n";
+                $xml->dataElement('Rating', $1);
             }
 
             if ($movie =~ /<br(?: \/)?>[^\w\s]*([\w\s]+)[^-]*-/i) {
-                print "<RunningTime>$1</RunningTime>\n";
+                $xml->dataElement('RunningTime', $1);
             }
 
             if ((my $showtimes) = ($movie =~ /^.*<br \/>(.*)<\/font>/i)) {
                 $showtimes =~ s/\s+/, /g;
-                print "<ShowTimes>$showtimes</ShowTimes>\n";
+                $xml->dataElement('ShowTimes', $showtimes);
             }
 
-            print "</Movie>\n";
+            $xml->endTag(); #Movie
         }
     }
 }
