@@ -10,8 +10,8 @@ use XML::Writer;
 # fetch url, change it if you have to, i.e. google.com to google.de
 my $googleurl = "http://www.google.com/movies?near=";
 
-# set to 1 to fetch only first page 
-my $fetch_pages = 10;
+# set to 1 to fetch only first page  with result
+my $fetch_pages = 5;
 
 # Otherwise we can get complaints when unicode is output
 binmode STDOUT, ':utf8';
@@ -101,7 +101,7 @@ sub parse_navbar {
 	my $rooturl = $googleurl;
 	$rooturl =~s/^(http:...*?)(\/.*)$/$1/i;
 
-
+	# look for a link with 'start=$nextstart'
 	my @links = $tree->look_down('_tag', 'div', id => 'navbar')->look_down('_tag', 'a');
 	foreach my $a (@links) {
 		if ($a->attr('href') =~/^\/movies\?.*start=$next_start$/) {
