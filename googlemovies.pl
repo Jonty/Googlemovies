@@ -7,10 +7,11 @@ use HTML::Entities;
 use HTML::TreeBuilder;
 use XML::Writer;
 
-# fetch url, change it if you have to, i.e. google.com to google.de
+# Google url. You shoudn't need to change this unless fetching totally fails.
+# Just change the domain to your local google, i.e. google.com to google.de
 my $googleurl = "http://www.google.com/movies?near=";
 
-# set to 1 to fetch only first page  with result
+# Set to 1 to fetch only first page of results
 my $fetch_pages = 10;
 
 # Otherwise we can get complaints when unicode is output
