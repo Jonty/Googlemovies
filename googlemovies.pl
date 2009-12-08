@@ -11,7 +11,7 @@ use XML::Writer;
 my $googleurl = "http://www.google.com/movies?near=";
 
 # set to 1 to fetch only first page  with result
-my $fetch_pages = 5;
+my $fetch_pages = 10;
 
 # Otherwise we can get complaints when unicode is output
 binmode STDOUT, ':utf8';
@@ -89,16 +89,18 @@ sub parse_navbar {
     $rooturl =~s/^(http:...*?)(\/.*)$/$1/i;
 
     # look for a link with 'start=$nextstart'
-    my @links = $tree->look_down('_tag', 'div', id => 'navbar')->look_down('_tag', 'a');
-    foreach my $a (@links) {
-        if ($a->attr('href') =~/^\/movies\?.*start=$next_start$/) {
-            if ($a->attr('href') !~/^http:/) {
-                $return_url = $rooturl.$a->attr('href');
-            } else {
-                $return_url = $a->attr('href');
+    if (my $navbar = $tree->look_down('_tag', 'div', id => 'navbar')) {
+        my @links = $navbar->look_down('_tag', 'a');
+        foreach my $a (@links) {
+            if ($a->attr('href') =~/^\/movies\?.*start=$next_start$/) {
+                if ($a->attr('href') !~/^http:/) {
+                    $return_url = $rooturl.$a->attr('href');
+                } else {
+                    $return_url = $a->attr('href');
+                }
+                $start = $next_start;
+                last;
             }
-            $start = $next_start;
-            last;
         }
     }
     return $return_url;
