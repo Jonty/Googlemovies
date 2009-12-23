@@ -132,11 +132,14 @@ sub parse_movies {
 
         my $info = ($movierow->look_down('_tag', 'span', class => 'info'))[0]->as_text;
         if ($info) {
-            if ($info =~ /Rated\s+(\w+)/i) {
-                $xml->dataElement('Rating', $1);
+            my @imgs = $movierow->look_down('_tag', 'img');
+            foreach my $img (@imgs) {
+                if ($img->attr('alt') =~ /(\d.*$)/i) {
+                    $xml->dataElement('Rating', $1);
+                }
             }
 
-            if ($info =~ /(\d+hr\s+\d+min)/i) {
+            if ($info =~ /(\d+\w+\s*\d+\w+)/i) {
                 $xml->dataElement('RunningTime', $1);
             }
         }
@@ -144,8 +147,13 @@ sub parse_movies {
         my $showtimes = ($movierow->look_down('_tag', 'div', class => 'times'))[0]->as_text;
         if ($showtimes) {
             $showtimes =~ s/[\xC2\xA0]+//g; # Myth can't handle UTF8 nbsp
-            $showtimes =~ s/\s+/, /g;
-            $xml->dataElement('ShowTimes', $showtimes);
+
+            # Occasionally this line also contains information about subtitles
+            $showtimes =~ /^(.*?)(\d.*$)/;
+            my ($info, $times) = ($1, $2);
+            $times =~ s/\s+/, /g;
+
+            $xml->dataElement('ShowTimes', $info.$times);
         }
 
         $xml->endTag(); #Movie
